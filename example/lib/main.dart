@@ -1,8 +1,12 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_desktop_audio_recorder/flutter_desktop_audio_recorder.dart';
+import 'package:flutter_desktop_audio_recorder_example/utilities.dart';
 
 void main() {
   runApp(const MyApp());
@@ -16,34 +20,30 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  String _platformVersion = 'Unknown';
+  bool _hasMicPermission = false;
+  FlutterDesktopAudioRecorder recorder = FlutterDesktopAudioRecorder();
 
   @override
   void initState() {
     super.initState();
     initPlatformState();
+    recorder.permissionGrantedListener = () {
+      if (!mounted) return;
+      setState(() {
+        _hasMicPermission = true;
+      });
+    };
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
   Future<void> initPlatformState() async {
-    String platformVersion;
-    // Platform messages may fail, so we use a try/catch PlatformException.
-    // We also handle the message potentially returning null.
-    try {
-      platformVersion =
-          await FlutterDesktopAudioRecorder.platformVersion ?? 'Unknown platform version';
-    } on PlatformException {
-      platformVersion = 'Failed to get platform version.';
-    }
+    _hasMicPermission = await recorder.hasMicPermission();
 
     // If the widget was removed from the tree while the asynchronous platform
     // message was in flight, we want to discard the reply rather than calling
     // setState to update our non-existent appearance.
     if (!mounted) return;
-
-    setState(() {
-      _platformVersion = platformVersion;
-    });
+    setState(() {});
   }
 
   @override
@@ -51,12 +51,71 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Plugin example app'),
+          title: const Text("Desktop Audio Recorder Example"),
         ),
-        body: Center(
-          child: Text('Running on: $_platformVersion\n'),
-        ),
+        body: FutureBuilder<bool>(
+            future: recorder.isRecording(),
+            builder: (context, snapshot) {
+              bool? isRecording = snapshot.data;
+              return Center(
+                child: Column(
+                  children: [
+                    TextButton(
+                        onPressed: () async {
+                          if (snapshot.data != null) {
+                            if (snapshot.data!) {
+                              await stopRecording();
+                              setState(() {});
+                            } else {
+                              startRecording().then((value) {
+                                recorder.isRecording().then((value) {
+                                  print(value);
+                                });
+                                setState(() {});
+                              });
+                              setState(() {});
+                            }
+                          }
+                        },
+                        child: Text(isRecording == null
+                            ? "Initializing"
+                            : !_hasMicPermission
+                                ? "Request Mic Permission"
+                                : isRecording
+                                    ? "Stop"
+                                    : "Record")),
+                    const SizedBox(
+                      height: 48,
+                    ),
+                    Text(_hasMicPermission
+                        ? "Permission Is Granted"
+                        : "Permission Is Not Granted")
+                  ],
+                ),
+              );
+            }),
       ),
     );
+  }
+
+  Future stopRecording() async {
+    return recorder.stop();
+  }
+
+  Future startRecording() async {
+    String fileName =
+        DateTime.now().toIso8601String().split('.').first + ".m4a";
+    String path = await Utilities.getVoiceFilePath();
+    try {
+      return await recorder.start(path: path, fileName: fileName);
+    } on PlatformException catch (e) {
+      switch (e.code) {
+        case "permissionError":
+          recorder.requestMicPermission();
+          break;
+        default:
+      }
+      log(e.message ?? "Unhandled error");
+    }
   }
 }
