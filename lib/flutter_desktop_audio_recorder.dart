@@ -33,7 +33,7 @@ class FlutterDesktopAudioRecorder {
         : Platform.isWindows
             ? windowsFileExtension
             : "";
-    String fileNameWithExtension = "$fileName.$windowsFileExtension";
+    String fileNameWithExtension = "$fileName.$fileExtension";
     String fullPath = "$path/$fileNameWithExtension";
     log("recording started with path: $fullPath");
 
@@ -42,8 +42,8 @@ class FlutterDesktopAudioRecorder {
       "fileName": fileNameWithExtension
     };
     if (await Directory(path).exists()) {
-      bool started =
-          await _channel.invokeMethod('start_audio_record', aruments);
+      bool? started =
+          await _channel.invokeMethod('start_audio_record', aruments) ?? false;
       log("recording started: $started");
       return;
     }
@@ -58,8 +58,7 @@ class FlutterDesktopAudioRecorder {
   }
 
   void stop() async {
-    String fileName = await _channel.invokeMethod('stop_audio_record');
-    log("audio file saved: $fileName");
+    await _channel.invokeMethod('stop_audio_record');
   }
 
   void requestMicPermission() async {

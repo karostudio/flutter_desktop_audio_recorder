@@ -87,7 +87,9 @@ class _MyAppState extends State<MyApp> {
         onPressed: () async {
           if (snapshot.data != null) {
             if (snapshot.data!) {
-              await stopRecording();
+              stopRecording().then((value) {
+                setState(() {});
+              });
               setState(() {});
             } else {
               startRecording().then((value) {
