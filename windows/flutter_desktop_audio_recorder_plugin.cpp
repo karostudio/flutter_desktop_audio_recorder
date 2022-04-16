@@ -1,20 +1,23 @@
 #include "include/flutter_desktop_audio_recorder/flutter_desktop_audio_recorder_plugin.h"
+#include "voiceRecording.h"
+#include <mmsystem.h>
+
 
 // This must be included before many other Windows headers.
 #include <windows.h>
 
-// For getPlatformVersion; remove unless needed for your plugin implementation.
-#include <VersionHelpers.h>
-
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
-
 #include <map>
 #include <memory>
 #include <sstream>
+#include <string>
+
+using namespace N;
 
 namespace {
+  VoiceRecording recorder;
 
 class FlutterDesktopAudioRecorderPlugin : public flutter::Plugin {
  public:
@@ -25,6 +28,7 @@ class FlutterDesktopAudioRecorderPlugin : public flutter::Plugin {
   virtual ~FlutterDesktopAudioRecorderPlugin();
 
  private:
+
   // Called when a method is called on this plugin's channel from Dart.
   void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
@@ -56,20 +60,29 @@ FlutterDesktopAudioRecorderPlugin::~FlutterDesktopAudioRecorderPlugin() {}
 void FlutterDesktopAudioRecorderPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  if (method_call.method_name().compare("getPlatformVersion") == 0) {
-    std::ostringstream version_stream;
-    version_stream << "Windows ";
-    if (IsWindows10OrGreater()) {
-      version_stream << "10+";
-    } else if (IsWindows8OrGreater()) {
-      version_stream << "8";
-    } else if (IsWindows7OrGreater()) {
-      version_stream << "7";
+    const auto *arguments = std::get_if<flutter::EncodableMap>(method_call.arguments());
+    
+    if (method_call.method_name().compare("start_audio_record") == 0) {
+      auto name_it = arguments->find(flutter::EncodableValue("fileName"));
+      if (name_it != arguments->end())
+      {
+        std::string fileName = std::get<std::string>(name_it->second);
+        result->Success(flutter:: EncodableValue(recorder.startRecording(fileName)));
+      }
+      result->Error("Error while parsing path");
     }
-    result->Success(flutter::EncodableValue(version_stream.str()));
-  } else {
-    result->NotImplemented();
-  }
+    else if (method_call.method_name().compare("stop_audio_record") == 0) {
+      recorder.stopRecording();
+      result-> Success(recorder._fileName);
+    }
+    else  if (method_call.method_name().compare("is_recording") == 0) {
+      result->Success(flutter:: EncodableValue(recorder.isRecording));
+    }
+    else if (method_call.method_name().compare("has_mic_permission") == 0) {
+      result->Success(flutter:: EncodableValue(true));
+    } else {
+      result->NotImplemented();
+    }
 }
 
 }  // namespace

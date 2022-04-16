@@ -8,6 +8,7 @@ set(PLUGIN_NAME "flutter_desktop_audio_recorder_plugin")
 
 add_library(${PLUGIN_NAME} SHARED
   "flutter_desktop_audio_recorder_plugin.cpp"
+  "voiceRecording.cpp"
 )
 apply_standard_settings(${PLUGIN_NAME})
 set_target_properties(${PLUGIN_NAME} PROPERTIES

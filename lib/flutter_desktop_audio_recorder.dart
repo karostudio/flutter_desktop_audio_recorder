@@ -8,6 +8,8 @@ class FlutterDesktopAudioRecorder {
   final MethodChannel _channel =
       MethodChannel('flutter_desktop_audio_recorder');
   Function? permissionGrantedListener;
+  String macosFileExtension = "m4a";
+  String windowsFileExtension = "wav";
 
   FlutterDesktopAudioRecorder() {
     _channel.setMethodCallHandler(_didRecieveTranscript);
@@ -24,22 +26,40 @@ class FlutterDesktopAudioRecorder {
     }
   }
 
+  /// fileName without extension
   Future<void> start({required String path, required String fileName}) async {
-    String fullPath = "$path/$fileName";
-    var aruments = <String, dynamic>{"path": fullPath};
+    String fileExtension = Platform.isMacOS
+        ? macosFileExtension
+        : Platform.isWindows
+            ? windowsFileExtension
+            : "";
+    String fileNameWithExtension = "$fileName.$windowsFileExtension";
+    String fullPath = "$path/$fileNameWithExtension";
+    log("recording started with path: $fullPath");
+
+    var aruments = <String, dynamic>{
+      "path": fullPath,
+      "fileName": fileNameWithExtension
+    };
     if (await Directory(path).exists()) {
-      return _channel.invokeMethod('start_audio_record', aruments);
+      bool started =
+          await _channel.invokeMethod('start_audio_record', aruments);
+      log("recording started: $started");
+      return;
     }
     log("Audio recorder error: Path does not exist");
     return;
   }
 
   Future<bool> isRecording() async {
-    return await _channel.invokeMethod('is_recording');
+    bool isRecording = await _channel.invokeMethod('is_recording');
+    print("isRecording: $isRecording");
+    return isRecording;
   }
 
   void stop() async {
-    await _channel.invokeMethod('stop_audio_record');
+    String fileName = await _channel.invokeMethod('stop_audio_record');
+    log("audio file saved: $fileName");
   }
 
   void requestMicPermission() async {

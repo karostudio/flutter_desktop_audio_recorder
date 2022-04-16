@@ -1,6 +1,6 @@
 import 'dart:developer';
-import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
@@ -22,6 +22,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _hasMicPermission = false;
   FlutterDesktopAudioRecorder recorder = FlutterDesktopAudioRecorder();
+  String _fileName = "";
 
   @override
   void initState() {
@@ -60,33 +61,15 @@ class _MyAppState extends State<MyApp> {
               return Center(
                 child: Column(
                   children: [
-                    TextButton(
-                        onPressed: () async {
-                          if (snapshot.data != null) {
-                            if (snapshot.data!) {
-                              await stopRecording();
-                              setState(() {});
-                            } else {
-                              startRecording().then((value) {
-                                recorder.isRecording().then((value) {
-                                  print(value);
-                                });
-                                setState(() {});
-                              });
-                              setState(() {});
-                            }
-                          }
-                        },
-                        child: Text(isRecording == null
-                            ? "Initializing"
-                            : !_hasMicPermission
-                                ? "Request Mic Permission"
-                                : isRecording
-                                    ? "Stop"
-                                    : "Record")),
+                    startRecordingButton(snapshot, isRecording),
                     const SizedBox(
                       height: 48,
                     ),
+                    Text((isRecording ?? false)
+                        ? "Audio is recording"
+                        : _fileName.isEmpty
+                            ? ""
+                            : "File Name: $_fileName.wav"),
                     Text(_hasMicPermission
                         ? "Permission Is Granted"
                         : "Permission Is Not Granted")
@@ -98,16 +81,45 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
+  TextButton startRecordingButton(
+      AsyncSnapshot<bool> snapshot, bool? isRecording) {
+    return TextButton(
+        onPressed: () async {
+          if (snapshot.data != null) {
+            if (snapshot.data!) {
+              await stopRecording();
+              setState(() {});
+            } else {
+              startRecording().then((value) {
+                recorder.isRecording().then((value) {
+                  if (kDebugMode) {
+                    print(value);
+                  }
+                });
+                setState(() {});
+              });
+              setState(() {});
+            }
+          }
+        },
+        child: Text(isRecording == null
+            ? "Initializing"
+            : !_hasMicPermission
+                ? "Request Mic Permission"
+                : isRecording
+                    ? "Stop"
+                    : "Record"));
+  }
+
   Future stopRecording() async {
     return recorder.stop();
   }
 
   Future startRecording() async {
-    String fileName =
-        DateTime.now().toIso8601String().split('.').first + ".m4a";
+    _fileName = DateTime.now().millisecondsSinceEpoch.toString();
     String path = await Utilities.getVoiceFilePath();
     try {
-      return await recorder.start(path: path, fileName: fileName);
+      return await recorder.start(path: path, fileName: _fileName);
     } on PlatformException catch (e) {
       switch (e.code) {
         case "permissionError":
