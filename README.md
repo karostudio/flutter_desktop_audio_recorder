@@ -1,15 +1,61 @@
 # flutter_desktop_audio_recorder
 
-A new flutter plugin project.
+This is a Flutter package allowing you to record audio for:
+* macOS
+* windows
 
-## Getting Started
+## Output file type
+* macOS: .m4a
+* windows: .wav
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+## Usage
+```javascript
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+  FlutterDesktopAudioRecorder recorder = FlutterDesktopAudioRecorder();
+
+  @override
+  void initState() {
+    super.initState();
+    
+    _hasMicPermission = await recorder.hasMicPermission();
+    
+    recorder.permissionGrantedListener = () {
+      if (!mounted) return;
+      setState(() {
+        _hasMicPermission = true;
+      });
+    };
+  }
+  
+  Future startRecording() async {
+    _fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    String path = await Utilities.getVoiceFilePath();
+    try {
+      return await recorder.start(path: path, fileName: _fileName);
+    } on PlatformException catch (e) {
+      switch (e.code) {
+        case "permissionError":
+          recorder.requestMicPermission();
+          break;
+        default:
+      }
+      log(e.message ?? "Unhandled error");
+    }
+  }
+  
+  Future stopRecording() async {
+    return recorder.stop();
+  }
+  
+  Future isRecording() async {
+    return recorder.isRecording();
+  }
+```
+
+## macOS Permission 
+    1. Add usage description to plist 
+    ```
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Can We Use Your Microphone Please</string>
+    ```
 
