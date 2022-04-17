@@ -1,7 +1,7 @@
 name: flutter_desktop_audio_recorder
 description: A new flutter plugin project.
 version: 0.0.1
-homepage:
+repository: https://github.com/sebastiankan/flutter_desktop_audio_recorder.git
 
 environment:
   sdk: ">=2.16.2 <3.0.0"
